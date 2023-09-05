@@ -11,6 +11,37 @@ router.get('/', async (req, res) => {
     res.send(`There are ${cardCount} card(s) in the database`);
 });
 
+router.get('/random', async (req, res) => {
+    const response = await fetch(
+        `https://api.scryfall.com/cards/random?q=f%3Acommander`
+        );
+    const randomCard = await response.json();
+    res.send(randomCard)
+});
+
+router.get('/random/:colors', async (req, res) => {
+    const isValid = req.params.colors.toLowerCase().split('').every((char) => {
+        return 'wubrgc'.indexOf(char) !== -1;
+    });
+    if (!isValid) {
+        res.status(400).send("Invalid color string")
+        return
+    }
+    const response = await fetch(
+        `https://api.scryfall.com/cards/random?q=f%3Acommander%20commander%3A${req.params.colors}`
+        );
+    const randomCard = await response.json();
+    res.send(randomCard)
+});
+
+router.get('/:name', async (req, res) => {
+    const response = await fetch(
+        `https://api.scryfall.com/cards/named?fuzzy=${req.params.name}`
+        );
+    const card = await response.json();
+    res.send(card);
+});
+
 router.get('/:set/:number', async (req, res) => {
     const cards = await loadCardsCollection();
     const card = await cards.findOne({ 
