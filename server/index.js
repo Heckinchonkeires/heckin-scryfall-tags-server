@@ -12,6 +12,18 @@ const cards = require('./routes/api/cards');
 
 app.use('/api/cards', cards);
 
+// Handle production
+
+if(process.env.NODE_ENV === 'production') {
+    // Static folder
+    app.use(express.static(__dirname + '/public'));
+
+    // Handle SPA
+    app.get(/.*/, (req, res) => {
+        res.sendFile(__dirname + '/public/index.html')
+    });
+}  
+
 // Error handling
 app.use((req, res, next) => {
     const error = new Error('Not found');
@@ -27,18 +39,6 @@ app.use((error, req, res, next) => {
         }
     })
 });
-
-// Handle production
-
-if(process.env.NODE_ENV === 'production') {
-    // Static folder
-    app.use(express.static(__dirname + '/public'));
-
-    // Handle SPA
-    app.get(/.*/, (req, res) => {
-        res.sendFile(__dirname + '/public/index.html')
-    });
-}  
 
 const port = process.env.PORT || 5000;
 
