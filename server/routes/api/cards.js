@@ -1,7 +1,11 @@
 const express = require('express');
 const mongodb = require('mongodb');
 const puppeteer = require("puppeteer");
-const DATABASE_URI = require('../../../dburi')
+if(process.env.NODE_ENV === 'production') {
+    const DATABASE_URI = null;
+} else {
+    const DATABASE_URI = require('../../../dburi')
+}
 
 const router = express.Router();
 
