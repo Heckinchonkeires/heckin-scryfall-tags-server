@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
     res.send(`There are ${cardCount} card(s) in the database`);
 });
 
+//gets a random card from Scryfall
 router.get('/random', async (req, res) => {
     const response = await fetch(
         `https://api.scryfall.com/cards/random?q=f%3Acommander`
@@ -19,7 +20,9 @@ router.get('/random', async (req, res) => {
     res.send(randomCard)
 });
 
+//gets a random card from Scryfall with the provided colors
 router.get('/random/:colors', async (req, res) => {
+    //checks that every character in the colors parameter is a valid one
     const isValid = req.params.colors.toLowerCase().split('').every((char) => {
         return 'wubrgc'.indexOf(char) !== -1;
     });
@@ -34,6 +37,7 @@ router.get('/random/:colors', async (req, res) => {
     res.send(randomCard)
 });
 
+//gets all the cards that match the given tags from Scryfall
 router.get('/tags/:tags', async (req, res) => {
     const tagsArray = req.params.tags.split(' ');
     const queryString = buildTagQueryString(tagsArray)
@@ -44,6 +48,8 @@ router.get('/tags/:tags', async (req, res) => {
     res.send(cardList)
 });
 
+
+//gets the card from Scryfall that matches the given name the closest
 router.get('/:name', async (req, res) => {
     const response = await fetch(
         `https://api.scryfall.com/cards/named?fuzzy=${req.params.name}`
@@ -52,17 +58,19 @@ router.get('/:name', async (req, res) => {
     res.send(card);
 });
 
+//gets all the tags for the card with the given set code and collector number
 router.get('/:set/:number', async (req, res) => {
-    const card = await loadCardTags(req.params.set, req.params.number);
+    const tags = await loadCardTags(req.params.set, req.params.number);
 
-    if (!card) {
+    if (!tags) {
         res.status(400).send("No tags found")
         return
     }
 
-    res.json(card);
+    res.json(tags);
 });
 
+//returns a query string for searching cards by tags
 function buildTagQueryString(tags) {
     let queryString = `?order=edhrec&q=otag:${tags[0]}`;
 
@@ -77,6 +85,7 @@ function buildTagQueryString(tags) {
     return queryString
 };
 
+//returns card data. From the database if it already exists, or from Scryfall otherwise
 async function loadCardTags(set, number) {
     const cards = await loadCardsCollection();
     const card = await cards.findOne({
@@ -101,6 +110,7 @@ async function loadCardTags(set, number) {
     return card
 }
 
+//connects to the database and returns the collection of cards
 async function loadCardsCollection() {  
     const client = await mongodb.MongoClient.connect(
         process.env.MONGODB_URI || DATABASE_URI.uri
@@ -109,11 +119,15 @@ async function loadCardsCollection() {
     return client.db('heckinScryfallTags').collection('cards');
 };
 
+//gets all the tags for a card with the given set and number from
+//tagger.scryfall.com using puppeteer.
+//returns the tags as an array
 async function getScryfallTags(set, number) {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto(`https://tagger.scryfall.com/card/${set}/${number}`);
 
+    //find the main tags
     const tags = await page.evaluate(() => {
         const tagTable = Array.from(
         document.querySelectorAll(
@@ -121,10 +135,11 @@ async function getScryfallTags(set, number) {
         )
         );
         return tagTable.map((tagTable) => {
-        return tagTable.innerHTML;
+            return tagTable.innerHTML;
         });
     });
 
+    //find the inherited tags
     const inheritedTags = await page.evaluate(() => {
         const tagList = Array.from(
         document.querySelectorAll(
@@ -132,7 +147,7 @@ async function getScryfallTags(set, number) {
         )
         );
         return tagList.map((tag) => {
-        return tag.innerHTML;
+            return tag.innerHTML;
         });
     });
 
@@ -140,7 +155,7 @@ async function getScryfallTags(set, number) {
 
     allTags.sort();
 
-    //removes the better than/worse than/referenced by/similar to bits
+    //removes the better than/worse than/referenced by/similar to tags
     allTags = allTags.filter((tag) => {
         return !tag.match(/^[A-Z]/g);
     })
