@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkheckin_scryfall_tags"]=self["webpackChunkheckin_scryfall_tags"]||[]).push([[443],{833:function(n,a,s){s.r(a),s.d(a,{default:function(){return h}});var t=s(3396);const c={class:"about"},e=(0,t._)("h1",null,"This is an about page",-1),r=[e];function u(n,a){return(0,t.wg)(),(0,t.iD)("div",c,r)}var i=s(89);const l={},f=(0,i.Z)(l,[["render",u]]);var h=f}}]);
+//# sourceMappingURL=about.14a67fd3.js.map
