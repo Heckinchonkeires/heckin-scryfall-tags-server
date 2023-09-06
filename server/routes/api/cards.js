@@ -34,6 +34,16 @@ router.get('/random/:colors', async (req, res) => {
     res.send(randomCard)
 });
 
+router.get('/tags/:tags', async (req, res) => {
+    const tagsArray = req.params.tags.split(' ');
+    const queryString = buildTagQueryString(tagsArray)
+    const response = await fetch(
+        `https://api.scryfall.com/cards/search${queryString}`
+    );
+    const cardList = await response.json();
+    res.send(cardList)
+});
+
 router.get('/:name', async (req, res) => {
     const response = await fetch(
         `https://api.scryfall.com/cards/named?fuzzy=${req.params.name}`
@@ -43,30 +53,53 @@ router.get('/:name', async (req, res) => {
 });
 
 router.get('/:set/:number', async (req, res) => {
-    const cards = await loadCardsCollection();
-    const card = await cards.findOne({ 
-        set: req.params.set, 
-        number: req.params.number
-    });
+    const card = await loadCardTags(req.params.set, req.params.number);
 
     if (!card) {
-        const tags = await getScryfallTags(req.params.set, req.params.number);
-        if (!tags.length) {
-            res.status(400).send("No tags found")
-            return
-        }
-        await cards.insertOne({
-            set: req.params.set,
-            number: req.params.number,
-            tags: tags,
-            dateRetrieved: new Date()
-        });
-        res.status(201).send("Created new card")
+        res.status(400).send("No tags found")
         return
     }
 
-    res.json(card)
+    res.json(card);
 });
+
+function buildTagQueryString(tags) {
+    let queryString = `?order=edhrec&q=otag:${tags[0]}`;
+
+    if (tags.length === 1) {
+        return queryString;
+    };
+
+    for (let i = 1; i < tags.length; i++) {
+        queryString += `+or+otag:${tags[i]}`;
+    };
+
+    return queryString
+};
+
+async function loadCardTags(set, number) {
+    const cards = await loadCardsCollection();
+    const card = await cards.findOne({
+        set: set, 
+        number: number
+    })
+
+    if (!card) {
+        const tags = await getScryfallTags(set, number);
+        if (!tags.length) {
+            return null
+        }
+        const newCard = {
+            set: set,
+            number: number,
+            tags: tags,
+            dateRetrieved: new Date()  
+        }
+        await cards.insertOne(newCard);
+        return newCard;
+    }
+    return card
+}
 
 async function loadCardsCollection() {  
     const client = await mongodb.MongoClient.connect(
@@ -103,9 +136,14 @@ async function getScryfallTags(set, number) {
         });
     });
 
-    const allTags = tags.concat(inheritedTags);
+    let allTags = tags.concat(inheritedTags);
 
     allTags.sort();
+
+    //removes the better than/worse than/referenced by/similar to bits
+    allTags = allTags.filter((tag) => {
+        return !tag.match(/^[A-Z]/g);
+    })
 
     await browser.close();
 
