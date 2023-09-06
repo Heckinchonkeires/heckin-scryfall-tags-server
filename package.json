@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Server for heckin-scryfall-tags",
   "main": "index.js",
+  "engines": {
+    "node": "18.17.0"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js"
